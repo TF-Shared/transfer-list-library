@@ -110,6 +110,8 @@ static_assert(sizeof(struct transfer_list_entry) == 0x8U,
 	      "assert_transfer_list_entry_size");
 
 void transfer_list_dump(struct transfer_list_header *tl);
+void transfer_entry_dump(struct transfer_list_entry *te);
+struct transfer_list_header *transfer_list_ensure(void *addr, size_t size);
 struct transfer_list_header *transfer_list_init(void *addr, size_t max_size);
 
 struct transfer_list_header *
