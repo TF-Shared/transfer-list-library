@@ -12,6 +12,13 @@ user-friendly interface for:
 The library supports building with host tools such as Clang and GCC, and cross
 compilation with the Aarch64 GNU compiler.
 
+## Minimum Supporting Tooling Requirements
+
+| Tool         | Minimum Version |
+| ------------ | --------------- |
+| Clang-Format | 14              |
+| CMake        | 3.15            |
+
 ## Building with CMake
 
 To configure the project, use the following command. This will default to using
