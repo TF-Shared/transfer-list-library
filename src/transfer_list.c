@@ -12,7 +12,8 @@
 #include <math_utils.h>
 #include <transfer_list.h>
 
-void transfer_list_dump(struct transfer_list_header *tl) {
+void transfer_list_dump(struct transfer_list_header *tl)
+{
 	struct transfer_list_entry *te = NULL;
 	int i = 0;
 
@@ -371,10 +372,11 @@ struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 					      uint32_t data_size,
 					      const void *data)
 {
-	uintptr_t tl_ev;
+	uintptr_t max_tl_ev, tl_ev, ev;
 	struct transfer_list_entry *te = NULL;
 	uint8_t *te_data = NULL;
 	uintptr_t te_end;
+	size_t sz = 0;
 
 	if (!tl || (tag_id & (1 << 24))) {
 		return NULL;
