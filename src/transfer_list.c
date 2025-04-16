@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <math_utils.h>
+#include <private/math_utils.h>
 #include <transfer_list.h>
 
 void transfer_list_dump(struct transfer_list_header *tl)
@@ -64,8 +64,9 @@ struct transfer_list_header *transfer_list_init(void *addr, size_t max_size)
 		return NULL;
 	}
 
-	if (!is_aligned((uintptr_t)addr, 1 << TRANSFER_LIST_INIT_MAX_ALIGN) ||
-	    !is_aligned(max_size, 1 << TRANSFER_LIST_INIT_MAX_ALIGN) ||
+	if (!libtl_is_aligned((uintptr_t)addr,
+			      1 << TRANSFER_LIST_INIT_MAX_ALIGN) ||
+	    !libtl_is_aligned(max_size, 1 << TRANSFER_LIST_INIT_MAX_ALIGN) ||
 	    max_size < sizeof(*tl)) {
 		return NULL;
 	}
@@ -203,12 +204,12 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 	if (last) {
 		va = (uintptr_t)last;
 		/* check if the total size overflow */
-		if (add_overflow(last->hdr_size, last->data_size, &sz)) {
+		if (libtl_add_overflow(last->hdr_size, last->data_size, &sz)) {
 			return NULL;
 		}
 		/* roundup to the next entry */
-		if (add_with_round_up_overflow(va, sz, TRANSFER_LIST_GRANULE,
-					       &va)) {
+		if (libtl_add_with_round_up_overflow(
+			    va, sz, TRANSFER_LIST_GRANULE, &va)) {
 			return NULL;
 		}
 	} else {
@@ -218,8 +219,8 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 	te = (struct transfer_list_entry *)va;
 
 	if (va + sizeof(*te) > tl_ev || te->hdr_size < sizeof(*te) ||
-	    add_overflow(te->hdr_size, te->data_size, &sz) ||
-	    add_overflow(va, sz, &ev) || ev > tl_ev) {
+	    libtl_add_overflow(te->hdr_size, te->data_size, &sz) ||
+	    libtl_add_overflow(va, sz, &ev) || ev > tl_ev) {
 		return NULL;
 	}
 
@@ -324,14 +325,14 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 	 * calculate the old and new end of TE
 	 * both must be roundup to align with TRANSFER_LIST_GRANULE
 	 */
-	if (add_overflow(te->hdr_size, te->data_size, &sz) ||
-	    add_with_round_up_overflow((uintptr_t)te, sz, TRANSFER_LIST_GRANULE,
-				       &old_ev)) {
+	if (libtl_add_overflow(te->hdr_size, te->data_size, &sz) ||
+	    libtl_add_with_round_up_overflow((uintptr_t)te, sz,
+					     TRANSFER_LIST_GRANULE, &old_ev)) {
 		return false;
 	}
-	if (add_overflow(te->hdr_size, new_data_size, &sz) ||
-	    add_with_round_up_overflow((uintptr_t)te, sz, TRANSFER_LIST_GRANULE,
-				       &new_ev)) {
+	if (libtl_add_overflow(te->hdr_size, new_data_size, &sz) ||
+	    libtl_add_with_round_up_overflow((uintptr_t)te, sz,
+					     TRANSFER_LIST_GRANULE, &new_ev)) {
 		return false;
 	}
 
@@ -346,9 +347,9 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 		 */
 		dummy_te = transfer_list_next(tl, te);
 		if (dummy_te && (dummy_te->tag_id == TL_TAG_EMPTY)) {
-			merge_ev = align_up(old_ev + dummy_te->hdr_size +
-						    dummy_te->data_size,
-					    TRANSFER_LIST_GRANULE);
+			merge_ev = libtl_align_up(old_ev + dummy_te->hdr_size +
+							  dummy_te->data_size,
+						  TRANSFER_LIST_GRANULE);
 			if (merge_ev >= new_ev) {
 				gap = merge_ev - new_ev;
 				goto set_dummy;
@@ -364,7 +365,8 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 		 * the max size of TL
 		 */
 		mov_dis = new_ev - old_ev;
-		if (round_up_overflow(mov_dis, 1 << tl->alignment, &mov_dis) ||
+		if (libtl_round_up_overflow(mov_dis, 1 << tl->alignment,
+					    &mov_dis) ||
 		    tl->size + mov_dis > tl->max_size) {
 			return false;
 		}
@@ -409,14 +411,15 @@ bool transfer_list_rem(struct transfer_list_header *tl,
 	next = transfer_list_next(tl, te);
 
 	if (prev && prev->tag_id == TL_TAG_EMPTY) {
-		prev->data_size += align_up(te->hdr_size + te->data_size,
-					    TRANSFER_LIST_GRANULE);
+		prev->data_size += libtl_align_up(te->hdr_size + te->data_size,
+						  TRANSFER_LIST_GRANULE);
 		te = prev;
 	}
 
 	if (next && next->tag_id == TL_TAG_EMPTY) {
-		te->data_size += align_up(next->hdr_size + next->data_size,
-					  TRANSFER_LIST_GRANULE);
+		te->data_size +=
+			libtl_align_up(next->hdr_size + next->data_size,
+				       TRANSFER_LIST_GRANULE);
 	}
 
 	te->tag_id = TL_TAG_EMPTY;
@@ -448,11 +451,11 @@ struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 	 * new TE will be added into the tail
 	 */
 	tl_ev = (uintptr_t)tl + tl->size;
-	te = (struct transfer_list_entry *)align_up(tl_ev,
-						    TRANSFER_LIST_GRANULE);
+	te = (struct transfer_list_entry *)libtl_align_up(
+		tl_ev, TRANSFER_LIST_GRANULE);
 
-	te_end = align_up((uintptr_t)te + sizeof(*te) + data_size,
-			  TRANSFER_LIST_GRANULE);
+	te_end = libtl_align_up((uintptr_t)te + sizeof(*te) + data_size,
+				TRANSFER_LIST_GRANULE);
 
 	if (te_end > (uintptr_t)tl + tl->max_size) {
 		return NULL;
@@ -499,13 +502,13 @@ transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 	tl_ev = (uintptr_t)tl + tl->size;
 	ev = tl_ev + sizeof(struct transfer_list_entry);
 
-	if (!is_aligned(ev, 1 << alignment)) {
+	if (!libtl_is_aligned(ev, 1 << alignment)) {
 		/*
 		 * TE data address is not aligned to the new alignment
 		 * fill the gap with an empty TE as a placeholder before
 		 * adding the desire TE
 		 */
-		new_tl_ev = align_up(ev, 1 << alignment) -
+		new_tl_ev = libtl_align_up(ev, 1 << alignment) -
 			    sizeof(struct transfer_list_entry);
 		dummy_te_data_sz =
 			new_tl_ev - tl_ev - sizeof(struct transfer_list_entry);
