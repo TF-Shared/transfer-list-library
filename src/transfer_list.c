@@ -434,11 +434,10 @@ struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 					      uint32_t data_size,
 					      const void *data)
 {
-	uintptr_t max_tl_ev, tl_ev, ev;
+	uintptr_t tl_ev;
 	struct transfer_list_entry *te = NULL;
 	uint8_t *te_data = NULL;
 	uintptr_t te_end;
-	size_t sz = 0;
 
 	if (!tl || (tag_id & (1 << 24))) {
 		return NULL;
