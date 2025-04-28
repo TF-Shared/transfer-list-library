@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <logging.h>
 #include <private/math_utils.h>
 #include <transfer_list.h>
 
@@ -20,22 +21,22 @@ void transfer_list_dump(struct transfer_list_header *tl)
 	if (!tl) {
 		return;
 	}
-	printf("Dump transfer list:\n");
-	printf("signature  0x%x\n", tl->signature);
-	printf("checksum   0x%x\n", tl->checksum);
-	printf("version    0x%x\n", tl->version);
-	printf("hdr_size   0x%x\n", tl->hdr_size);
-	printf("alignment  0x%x\n", tl->alignment);
-	printf("size       0x%x\n", tl->size);
-	printf("max_size   0x%x\n", tl->max_size);
-	printf("flags      0x%x\n", tl->flags);
+	info("Dump transfer list:\n");
+	info("signature  0x%x\n", tl->signature);
+	info("checksum   0x%x\n", tl->checksum);
+	info("version    0x%x\n", tl->version);
+	info("hdr_size   0x%x\n", tl->hdr_size);
+	info("alignment  0x%x\n", tl->alignment);
+	info("size       0x%x\n", tl->size);
+	info("max_size   0x%x\n", tl->max_size);
+	info("flags      0x%x\n", tl->flags);
 	while (true) {
 		te = transfer_list_next(tl, te);
 		if (!te) {
 			break;
 		}
 
-		printf("Entry %d:\n", i++);
+		info("Entry %d:\n", i++);
 		transfer_entry_dump(te);
 	}
 }
@@ -43,11 +44,11 @@ void transfer_list_dump(struct transfer_list_header *tl)
 void transfer_entry_dump(struct transfer_list_entry *te)
 {
 	if (te) {
-		printf("tag_id     0x%x\n", te->tag_id);
-		printf("hdr_size   0x%x\n", te->hdr_size);
-		printf("data_size  0x%x\n", te->data_size);
-		printf("data_addr  0x%lx\n",
-		       (unsigned long)transfer_list_entry_data(te));
+		info("tag_id     0x%x\n", te->tag_id);
+		info("hdr_size   0x%x\n", te->hdr_size);
+		info("data_size  0x%x\n", te->data_size);
+		info("data_addr  0x%lx\n",
+		     (unsigned long)transfer_list_entry_data(te));
 	}
 }
 
@@ -139,46 +140,44 @@ transfer_list_check_header(const struct transfer_list_header *tl)
 	}
 
 	if (tl->signature != TRANSFER_LIST_SIGNATURE) {
-		printf("Bad transfer list signature %#" PRIx32 "\n",
-		       tl->signature);
+		warn("Bad transfer list signature %#" PRIx32 "\n",
+		     tl->signature);
 		return TL_OPS_NON;
 	}
 
 	if (!tl->max_size) {
-		printf("Bad transfer list max size %#" PRIx32 "\n",
-		       tl->max_size);
+		warn("Bad transfer list max size %#" PRIx32 "\n", tl->max_size);
 		return TL_OPS_NON;
 	}
 
 	if (tl->size > tl->max_size) {
-		printf("Bad transfer list size %#" PRIx32 "\n", tl->size);
+		warn("Bad transfer list size %#" PRIx32 "\n", tl->size);
 		return TL_OPS_NON;
 	}
 
 	if (tl->hdr_size != sizeof(struct transfer_list_header)) {
-		printf("Bad transfer list header size %#" PRIx32 "\n",
-		       tl->hdr_size);
+		warn("Bad transfer list header size %#" PRIx32 "\n",
+		     tl->hdr_size);
 		return TL_OPS_NON;
 	}
 
 	if (!transfer_list_verify_checksum(tl)) {
-		printf("Bad transfer list checksum %#" PRIx32 "\n",
-		       tl->checksum);
+		warn("Bad transfer list checksum %#" PRIx32 "\n", tl->checksum);
 		return TL_OPS_NON;
 	}
 
 	if (tl->version == 0) {
-		printf("Transfer list version is invalid\n");
+		warn("Transfer list version is invalid\n");
 		return TL_OPS_NON;
 	} else if (tl->version == TRANSFER_LIST_VERSION) {
-		printf("Transfer list version is valid for all operations\n");
+		info("Transfer list version is valid for all operations\n");
 		return TL_OPS_ALL;
 	} else if (tl->version > TRANSFER_LIST_VERSION) {
-		printf("Transfer list version is valid for read-only\n");
+		info("Transfer list version is valid for read-only\n");
 		return TL_OPS_RO;
 	}
 
-	printf("Old transfer list version is detected\n");
+	info("Old transfer list version is detected\n");
 	return TL_OPS_CUS;
 }
 

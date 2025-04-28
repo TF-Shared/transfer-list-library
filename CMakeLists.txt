@@ -23,13 +23,13 @@ SET(TARGET_GROUP release CACHE STRING "Specify the Build Target [\"release\" by 
 add_library(tl
     STATIC
         ${PROJECT_SOURCE_DIR}/src/generic/transfer_list.c
+        ${PROJECT_SOURCE_DIR}/src/generic/logging.c
 )
 
 target_include_directories(tl
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
 )
-
 target_link_libraries(tl PUBLIC cxx_compiler_flags)
 
 if(PROJECT_API)
