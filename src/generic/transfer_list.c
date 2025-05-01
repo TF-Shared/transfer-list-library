@@ -52,11 +52,6 @@ void transfer_entry_dump(struct transfer_list_entry *te)
 	}
 }
 
-/*******************************************************************************
- * Creating a transfer list in a reserved memory region specified
- * Compliant to 2.4.5 of Firmware handoff specification (v0.9)
- * Return pointer to the created transfer list or NULL on error
- ******************************************************************************/
 struct transfer_list_header *transfer_list_init(void *addr, size_t max_size)
 {
 	struct transfer_list_header *tl = addr;
@@ -86,11 +81,6 @@ struct transfer_list_header *transfer_list_init(void *addr, size_t max_size)
 	return tl;
 }
 
-/*******************************************************************************
- * Relocating a transfer list to a reserved memory region specified
- * Compliant to 2.4.6 of Firmware handoff specification (v0.9)
- * Return pointer to the relocated transfer list or NULL on error
- ******************************************************************************/
 struct transfer_list_header *
 transfer_list_relocate(struct transfer_list_header *tl, void *addr,
 		       size_t max_size)
@@ -127,11 +117,6 @@ transfer_list_relocate(struct transfer_list_header *tl, void *addr,
 	return new_tl;
 }
 
-/*******************************************************************************
- * Verifying the header of a transfer list
- * Compliant to 2.4.1 of Firmware handoff specification (v0.9)
- * Return transfer list operation status code
- ******************************************************************************/
 enum transfer_list_ops
 transfer_list_check_header(const struct transfer_list_header *tl)
 {
@@ -181,10 +166,6 @@ transfer_list_check_header(const struct transfer_list_header *tl)
 	return TL_OPS_CUS;
 }
 
-/*******************************************************************************
- * Enumerate the next transfer entry
- * Return pointer to the next transfer entry or NULL on error
- ******************************************************************************/
 struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 					       struct transfer_list_entry *last)
 {
@@ -265,10 +246,6 @@ static uint8_t calc_byte_sum(const struct transfer_list_header *tl)
 	return cs;
 }
 
-/*******************************************************************************
- * Update the checksum of a transfer list
- * Return updated checksum of the transfer list
- ******************************************************************************/
 void transfer_list_update_checksum(struct transfer_list_header *tl)
 {
 	uint8_t cs;
@@ -284,10 +261,6 @@ void transfer_list_update_checksum(struct transfer_list_header *tl)
 	assert(transfer_list_verify_checksum(tl));
 }
 
-/*******************************************************************************
- * Verify the checksum of a transfer list
- * Return true if verified or false if not
- ******************************************************************************/
 bool transfer_list_verify_checksum(const struct transfer_list_header *tl)
 {
 	if (!tl) {
@@ -301,10 +274,6 @@ bool transfer_list_verify_checksum(const struct transfer_list_header *tl)
 	return !calc_byte_sum(tl);
 }
 
-/*******************************************************************************
- * Update the data size of a transfer entry
- * Return true on success or false on error
- ******************************************************************************/
 bool transfer_list_set_data_size(struct transfer_list_header *tl,
 				 struct transfer_list_entry *te,
 				 uint32_t new_data_size)
@@ -392,10 +361,6 @@ set_dummy:
 	return true;
 }
 
-/*******************************************************************************
- * Remove a specified transfer entry from a transfer list
- * Return true on success or false on error
- ******************************************************************************/
 bool transfer_list_rem(struct transfer_list_header *tl,
 		       struct transfer_list_entry *te)
 {
@@ -426,11 +391,6 @@ bool transfer_list_rem(struct transfer_list_header *tl,
 	return true;
 }
 
-/*******************************************************************************
- * Add a new transfer entry into a transfer list
- * Compliant to 2.4.3 of Firmware handoff specification (v0.9)
- * Return pointer to the added transfer entry or NULL on error
- ******************************************************************************/
 struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 					      uint32_t tag_id,
 					      uint32_t data_size,
@@ -479,12 +439,6 @@ struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 	return te;
 }
 
-/*******************************************************************************
- * Add a new transfer entry into a transfer list with specified new data
- * alignment requirement
- * Compliant to 2.4.4 of Firmware handoff specification (v0.9)
- * Return pointer to the added transfer entry or NULL on error
- ******************************************************************************/
 struct transfer_list_entry *
 transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 			     uint32_t data_size, const void *data,
@@ -527,11 +481,6 @@ transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 	return te;
 }
 
-/*******************************************************************************
- * Search for an existing transfer entry with the specified tag id from a
- * transfer list
- * Return pointer to the found transfer entry or NULL on error
- ******************************************************************************/
 struct transfer_list_entry *transfer_list_find(struct transfer_list_header *tl,
 					       uint32_t tag_id)
 {
@@ -544,10 +493,6 @@ struct transfer_list_entry *transfer_list_find(struct transfer_list_header *tl,
 	return te;
 }
 
-/*******************************************************************************
- * Retrieve the data pointer of a specified transfer entry
- * Return pointer to the transfer entry data or NULL on error
- ******************************************************************************/
 void *transfer_list_entry_data(struct transfer_list_entry *entry)
 {
 	if (!entry) {
@@ -556,12 +501,6 @@ void *transfer_list_entry_data(struct transfer_list_entry *entry)
 	return (uint8_t *)entry + entry->hdr_size;
 }
 
-/*******************************************************************************
- * Verifies that the transfer list has not already been initialized, then
- * initializes it at the specified memory location.
- *
- * Return pointer to the transfer list or NULL on error
- * *****************************************************************************/
 struct transfer_list_header *transfer_list_ensure(void *addr, size_t size)
 {
 	struct transfer_list_header *tl = NULL;

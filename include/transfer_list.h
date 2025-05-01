@@ -125,48 +125,227 @@ struct __attribute__((packed)) transfer_list_entry {
 LIBTL_STATIC_ASSERT(sizeof(struct transfer_list_entry) == 0x8U,
 		    assert_transfer_list_entry_size);
 
-void transfer_list_dump(struct transfer_list_header *tl);
-void transfer_entry_dump(struct transfer_list_entry *te);
-struct transfer_list_header *transfer_list_ensure(void *addr, size_t size);
+/**
+ * Initialize a transfer list in a reserved memory region.
+ *
+ * Sets up an empty transfer list at the specified address. Ensures alignment
+ * and zeroes the region. Compliant to 2.4.5 of Firmware Handoff specification
+ * (v0.9).
+ *
+ * @param[in]  addr      Pointer to memory to initialize as a transfer list.
+ * @param[in]  max_size  Total size of the memory region in bytes.
+ *
+ * @return Pointer to the initialized transfer list, or NULL on error.
+ */
 struct transfer_list_header *transfer_list_init(void *addr, size_t max_size);
 
+/**
+ * Relocate a transfer list to a new memory region.
+ *
+ * Moves an existing transfer list to a new location while preserving alignment
+ * and contents. Updates internal pointers and checksum accordingly. Compliant
+ * to 2.4.6 of Firmware Handoff specification (v0.9).
+ *
+ * @param[in]  tl        Pointer to the existing transfer list.
+ * @param[in]  addr      Target address for relocation.
+ * @param[in]  max_size  Size of the target memory region in bytes.
+ *
+ * @return Pointer to the relocated transfer list, or NULL on error.
+ */
 struct transfer_list_header *
 transfer_list_relocate(struct transfer_list_header *tl, void *addr,
 		       size_t max_size);
+
+/**
+ * Check the validity of a transfer list header.
+ *
+ * Validates signature, size, version, and checksum of a transfer list.
+ * Compliant to 2.4.1 of Firmware Handoff specification (v0.9)
+ *
+ * @param[in] tl  Pointer to the transfer list to verify.
+ *
+ * @return A transfer_list_ops code indicating valid operations.
+ */
 enum transfer_list_ops
 transfer_list_check_header(const struct transfer_list_header *tl);
 
+/**
+ * Get the next transfer entry in the list.
+ *
+ * Enumerates transfer entries starting from the given entry or from the beginning.
+ *
+ * @param[in]  tl    Pointer to the transfer list.
+ * @param[in]  last  Pointer to the previous entry, or NULL to start at the beginning.
+ *
+ * @return Pointer to the next valid entry, or NULL on error or end of list.
+ */
+struct transfer_list_entry *
+transfer_list_next(struct transfer_list_header *tl,
+		   struct transfer_list_entry *last);
+
+/**
+ * Get the previous transfer entry in the list.
+ *
+ * Enumerates transfer entries backward from the given entry.
+ *
+ * @param[in]  tl    Pointer to the transfer list.
+ * @param[in]  last  Pointer to the current entry.
+ *
+ * @return Pointer to the previous valid entry, or NULL on error or start of list.
+ */
+struct transfer_list_entry *
+transfer_list_prev(struct transfer_list_header *tl,
+		   struct transfer_list_entry *last);
+
+/**
+ * Update the checksum of a transfer list.
+ *
+ * Recomputes and updates the checksum field based on current contents.
+ *
+ * @param[in,out] tl  Pointer to the transfer list to update.
+ */
 void transfer_list_update_checksum(struct transfer_list_header *tl);
+
+/**
+ * Verify the checksum of a transfer list.
+ *
+ * Computes and checks the checksum against the stored value.
+ *
+ * @param[in] tl  Pointer to the transfer list to verify.
+ *
+ * @return true if checksum is valid, false otherwise.
+ */
 bool transfer_list_verify_checksum(const struct transfer_list_header *tl);
 
+/**
+ * Set the data size of a transfer entry.
+ *
+ * Modifies the data size field of a given entry and adjusts subsequent entries.
+ *
+ * @param[in,out] tl            Pointer to the parent transfer list.
+ * @param[in,out] te            Pointer to the entry to modify.
+ * @param[in]     new_data_size New size of the entry data in bytes.
+ *
+ * @return true on success, false on error.
+ */
 bool transfer_list_set_data_size(struct transfer_list_header *tl,
-				 struct transfer_list_entry *entry,
+				 struct transfer_list_entry *te,
 				 uint32_t new_data_size);
 
-void *transfer_list_entry_data(struct transfer_list_entry *entry);
+/**
+ * Remove a transfer entry by marking it as empty.
+ *
+ * Clears the tag of a given entry and updates the list checksum.
+ *
+ * @param[in,out] tl  Pointer to the transfer list.
+ * @param[in,out] te  Pointer to the entry to remove.
+ *
+ * @return true on success, false on error.
+ */
 bool transfer_list_rem(struct transfer_list_header *tl,
-		       struct transfer_list_entry *entry);
+		       struct transfer_list_entry *te);
 
+/**
+ * Add a new transfer entry to the list.
+ *
+ * Appends a new entry with specified tag and data to the list tail.
+ *
+ * @param[in,out] tl         Pointer to the transfer list.
+ * @param[in]     tag_id     Tag identifier for the new entry.
+ * @param[in]     data_size  Size of the entry data in bytes.
+ * @param[in]     data       Pointer to the data to copy (can be NULL).
+ *
+ * @return Pointer to the added entry, or NULL on error.
+ */
 struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 					      uint32_t tag_id,
 					      uint32_t data_size,
 					      const void *data);
 
+/**
+ * Add a new transfer entry with specific alignment requirements.
+ *
+ * Inserts padding if needed to meet the alignment of the entry data.
+ *
+ * @param[in,out] tl         Pointer to the transfer list.
+ * @param[in]     tag_id     Tag identifier for the new entry.
+ * @param[in]     data_size  Size of the entry data in bytes.
+ * @param[in]     data       Pointer to the data to copy (can be NULL).
+ * @param[in]     alignment  Desired alignment (as log2 value).
+ *
+ * @return Pointer to the added entry, or NULL on error.
+ */
 struct transfer_list_entry *
 transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 			     uint32_t data_size, const void *data,
 			     uint8_t alignment);
 
-struct transfer_list_entry *
-transfer_list_next(struct transfer_list_header *tl,
-		   struct transfer_list_entry *last);
-
+/**
+ * Find an entry in the transfer list by tag.
+ *
+ * Search for an existing transfer entry with the specified tag id from a
+ * transfer list
+ *
+ * @param[in] tl      Pointer to the transfer list.
+ * @param[in] tag_id  Tag identifier to search for.
+ *
+ * @return Pointer to the found entry, or NULL if not found.
+ */
 struct transfer_list_entry *transfer_list_find(struct transfer_list_header *tl,
 					       uint32_t tag_id);
 
+/**
+ * Set handoff arguments in the entry point info structure.
+ *
+ * This function populates the provided entry point info structure with data
+ * from the transfer list.
+ *
+ * @param[in] tl        Pointer to the transfer list.
+ * @param[out] ep_info  Pointer to the entry point info structure to populate.
+ *
+ * @return Pointer to the populated entry point info structure.
+ */
 struct entry_point_info *
 transfer_list_set_handoff_args(struct transfer_list_header *tl,
 			       struct entry_point_info *ep_info);
+
+/**
+ * Get the data pointer of a transfer entry.
+ *
+ * Returns a pointer to the start of the entry's data buffer.
+ *
+ * @param[in] entry  Pointer to the transfer entry.
+ *
+ * @return Pointer to the data section, or NULL on error.
+ */
+void *transfer_list_entry_data(struct transfer_list_entry *entry);
+
+/**
+ * Ensure the transfer list is initialized.
+ *
+ * Verifies that the transfer list has not already been initialized, then
+ * initializes it at the specified memory location.
+ *
+ * @param[in]  addr  Pointer to the memory to verify or initialize.
+ * @param[in]  size  Size of the memory in bytes.
+ *
+ * @return Pointer to a valid transfer list, or NULL on error.
+ */
+struct transfer_list_header *transfer_list_ensure(void *addr, size_t size);
+
+/**
+ * Dump the contents of a transfer list.
+ *
+ * @param[in] tl   Pointer to the transfer list.
+ */
+void transfer_list_dump(struct transfer_list_header *tl);
+
+/**
+ * Dump the contents of a transfer entry.
+ *
+ * @param[in] te  Pointer to the transfer entry.
+ */
+void transfer_entry_dump(struct transfer_list_entry *te);
 
 #endif /* __ASSEMBLER__ */
 #endif /* TRANSFER_LIST_H */

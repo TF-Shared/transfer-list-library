@@ -8,17 +8,6 @@
 #include <stddef.h>
 #include <transfer_list.h>
 
-/**
- * Set handoff arguments in the entry point info structure.
- *
- * This function populates the provided entry point info structure with data
- * from the transfer list.
- *
- * @param[in] tl        Pointer to the transfer list.
- * @param[out] ep_info  Pointer to the entry point info structure to populate.
- *
- * @return Pointer to the populated entry point info structure.
- */
 struct entry_point_info *
 transfer_list_set_handoff_args(struct transfer_list_header *tl,
 			       struct entry_point_info *ep_info)
