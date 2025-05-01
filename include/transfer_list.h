@@ -109,8 +109,20 @@ struct __attribute__((packed)) transfer_list_entry {
 	 */
 };
 
-static_assert(sizeof(struct transfer_list_entry) == 0x8U,
-	      "assert_transfer_list_entry_size");
+/*
+ * Provide a backward-compatible implementation of static_assert.
+ * This keyword was introduced in C11, so it may be unavailable in
+ * projects targeting older C standards.
+ */
+#if __STDC_VERSION__ >= 201112L
+#define LIBTL_STATIC_ASSERT(cond, msg) _Static_assert(cond, #msg)
+#else
+#define LIBTL_STATIC_ASSERT(cond, msg) \
+	typedef char static_assertion_##msg[(cond) ? 1 : -1]
+#endif
+
+LIBTL_STATIC_ASSERT(sizeof(struct transfer_list_entry) == 0x8U,
+		    assert_transfer_list_entry_size);
 
 void transfer_list_dump(struct transfer_list_header *tl);
 void transfer_entry_dump(struct transfer_list_entry *te);
