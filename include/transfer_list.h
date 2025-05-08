@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define TRANSFER_LIST_SIGNATURE 0x4a0fb10b
@@ -162,6 +163,10 @@ transfer_list_next(struct transfer_list_header *tl,
 
 struct transfer_list_entry *transfer_list_find(struct transfer_list_header *tl,
 					       uint32_t tag_id);
+
+struct entry_point_info *
+transfer_list_set_handoff_args(struct transfer_list_header *tl,
+			       struct entry_point_info *ep_info);
 
 #endif /* __ASSEMBLER__ */
 #endif /* TRANSFER_LIST_H */

@@ -19,13 +19,22 @@ target_compile_features(cxx_compiler_flags INTERFACE cxx_std_11)
 
 SET(TARGET_GROUP release CACHE STRING "Specify the Build Target [\"release\" by default]")
 
-add_library(tl STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/transfer_list.c")
+
+add_library(tl
+    STATIC
+        ${PROJECT_SOURCE_DIR}/src/generic/transfer_list.c
+)
+
 target_include_directories(tl
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
 )
 
 target_link_libraries(tl PUBLIC cxx_compiler_flags)
+
+if(PROJECT_API)
+    include(${PROJECT_SOURCE_DIR}/cmake/ProjectApi.cmake)
+endif()
 
 if(TARGET_GROUP STREQUAL test)
     include(CTest)

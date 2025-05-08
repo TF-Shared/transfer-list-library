@@ -47,7 +47,7 @@ void transfer_entry_dump(struct transfer_list_entry *te)
 		printf("hdr_size   0x%x\n", te->hdr_size);
 		printf("data_size  0x%x\n", te->data_size);
 		printf("data_addr  0x%lx\n",
-		     (unsigned long)transfer_list_entry_data(te));
+		       (unsigned long)transfer_list_entry_data(te));
 	}
 }
 
