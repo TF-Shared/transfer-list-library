@@ -23,6 +23,7 @@ SET(TARGET_GROUP release CACHE STRING "Specify the Build Target [\"release\" by 
 add_library(tl
     STATIC
         ${PROJECT_SOURCE_DIR}/src/generic/transfer_list.c
+        ${PROJECT_SOURCE_DIR}/src/generic/tpm_event_log.c
         ${PROJECT_SOURCE_DIR}/src/generic/logging.c
 )
 
