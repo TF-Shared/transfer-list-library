@@ -21,29 +21,37 @@ compilation with the Aarch64 GNU compiler.
 
 ## Building with CMake
 
-To configure the project, use the following command. This will default to using
-GCC as the toolchain and create a build directory named `build/`:
+To configure the project with the default settings (using **GCC** as the host
+compiler), run:
 
 ```sh
 cmake -B build
 ```
 
-To build the project, use:
+Then, to compile the project and produce `libtl.a` in the `build/` directory:
 
 ```sh
 cmake --build build
 ```
 
-This will output libtl.a in the build directory.
-
-For cross-compilation or selecting a different compiler, specify the target
-toolchain file using the `CMAKE_TOOLCHAIN_FILE` option and the target with
-`CROSS_COMPILE`:
+To cross-compile the project (e.g., for AArch64), specify the appropriate tool
+using the `CC` option when configuring the project:
 
 ```sh
-export CROSS_COMPILE=aarch64-none-elf-
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=toolchains/host/gnu.cmake
+CC=aarch64-none-elf-gcc cmake -B build -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+cmake --build build
 ```
+
+You can specify the build mode using the `CMAKE_BUILD_TYPE` option. Supported
+modes include:
+
+- `Debug` – Full debug info with no optimization.
+- `Release` – Optimized build without debug info.
+- `RelWithDebInfo` – Optimized build with debug info.
+- `MinSizeRel` – Optimized for minimum size.
+
+APIs for specific projects can be conditionally included in the static library
+using the `PROJECT_API` option.
 
 ## Testing with CTest
 
