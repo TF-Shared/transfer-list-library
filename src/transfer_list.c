@@ -227,6 +227,28 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 }
 
 /*******************************************************************************
+ * Enumerate the prev transfer entry
+ * Return pointer to the prev transfer entry or NULL on error
+ ******************************************************************************/
+struct transfer_list_entry *transfer_list_prev(struct transfer_list_header *tl,
+					       struct transfer_list_entry *last)
+{
+	struct transfer_list_entry *prev;
+	struct transfer_list_entry *te = NULL;
+
+	if (!last || !tl || (tl + tl->hdr_size == (void *)last)) {
+		return NULL;
+	}
+
+	do {
+		prev = te;
+		te = transfer_list_next(tl, te);
+	} while (te && te != last);
+
+	return (te != NULL) ? prev : NULL;
+}
+
+/*******************************************************************************
  * Calculate the byte sum of a transfer list
  * Return byte sum of the transfer list
  ******************************************************************************/
@@ -287,7 +309,7 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 				 struct transfer_list_entry *te,
 				 uint32_t new_data_size)
 {
-	uintptr_t tl_old_ev, new_ev = 0, old_ev = 0, ru_new_ev;
+	uintptr_t tl_old_ev, new_ev = 0, old_ev = 0, merge_ev, ru_new_ev;
 	struct transfer_list_entry *dummy_te = NULL;
 	size_t gap = 0;
 	size_t mov_dis = 0;
@@ -315,6 +337,27 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 
 	if (new_ev > old_ev) {
 		/*
+		 * When next transfer list is dummy,
+		 *   - if te can be extended in boundary of dummy entry,
+		 *     extend it to dummy entry and set new dummy entry.
+		 *
+		 *   - otherwise, merge dummy entry with existing te and
+		 *     extend transfer list as much as it requires.
+		 */
+		dummy_te = transfer_list_next(tl, te);
+		if (dummy_te && (dummy_te->tag_id == TL_TAG_EMPTY)) {
+			merge_ev = align_up(old_ev + dummy_te->hdr_size +
+						    dummy_te->data_size,
+					    TRANSFER_LIST_GRANULE);
+			if (merge_ev >= new_ev) {
+				gap = merge_ev - new_ev;
+				goto set_dummy;
+			} else {
+				old_ev = merge_ev;
+			}
+		}
+
+		/*
 		 * move distance should be roundup
 		 * to meet the requirement of TE data max alignment
 		 * ensure that the increased size doesn't exceed
@@ -333,6 +376,7 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 		gap = old_ev - new_ev;
 	}
 
+set_dummy:
 	if (gap >= sizeof(*dummy_te)) {
 		/* create a dummy TE to fill up the gap */
 		dummy_te = (struct transfer_list_entry *)new_ev;
@@ -354,9 +398,27 @@ bool transfer_list_set_data_size(struct transfer_list_header *tl,
 bool transfer_list_rem(struct transfer_list_header *tl,
 		       struct transfer_list_entry *te)
 {
+	struct transfer_list_entry *prev;
+	struct transfer_list_entry *next;
+
 	if (!tl || !te || (uintptr_t)te > (uintptr_t)tl + tl->size) {
 		return false;
 	}
+
+	prev = transfer_list_prev(tl, te);
+	next = transfer_list_next(tl, te);
+
+	if (prev && prev->tag_id == TL_TAG_EMPTY) {
+		prev->data_size += align_up(te->hdr_size + te->data_size,
+					    TRANSFER_LIST_GRANULE);
+		te = prev;
+	}
+
+	if (next && next->tag_id == TL_TAG_EMPTY) {
+		te->data_size += align_up(next->hdr_size + next->data_size,
+					  TRANSFER_LIST_GRANULE);
+	}
+
 	te->tag_id = TL_TAG_EMPTY;
 	transfer_list_update_checksum(tl);
 	return true;

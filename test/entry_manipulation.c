@@ -6,22 +6,43 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "test.h"
 #include "transfer_list.h"
 #include "unity.h"
 
 void *buffer = NULL;
+char *test_page_data = NULL;
 
 uint8_t byte_sum(const char *ptr, size_t len)
 {
-	uint8_t sum;
+	uint8_t sum = 0;
 
 	for (size_t i = 0; i < len; i++) {
 		sum += ptr[i];
 	}
 
 	return sum;
+}
+
+static void setup_test_entries(struct transfer_list_header *tl,
+			       unsigned int tag_base, unsigned int num_entries,
+			       struct transfer_list_entry **entries)
+{
+	unsigned int i;
+	unsigned int te_data_size;
+	struct transfer_list_entry *te;
+
+	te_data_size = tl->max_size / (num_entries * 2);
+
+	for (i = 0; i < num_entries; i++) {
+		TEST_ASSERT(transfer_list_add(tl, tag_base + i, te_data_size,
+					      test_page_data));
+		TEST_ASSERT(te = transfer_list_find(tl, tag_base + i));
+		TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+		entries[i] = te;
+	}
 }
 
 void test_add()
@@ -93,29 +114,83 @@ void test_add_with_align()
 void test_rem()
 {
 	struct transfer_list_header *tl = transfer_list_init(buffer, TL_SIZE);
-	struct transfer_list_entry *te;
+	struct transfer_list_entry *te[3];
+	unsigned int tag_base = test_tag;
 
 	TEST_ASSERT_EQUAL(tl->size, tl->hdr_size);
 
-	/* Add a test TE, check the TL has been updated with its contents. */
-	TEST_ASSERT(
-		transfer_list_add(tl, test_tag, tl->max_size / 8, &test_data));
-	TEST_ASSERT(te = transfer_list_find(tl, test_tag));
-	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	setup_test_entries(tl, tag_base, 3, te);
 
-	/* Remove the TE and make sure it isn't present in the TL. */
-	TEST_ASSERT_TRUE(transfer_list_rem(tl, te));
+	/* Remove the TE and make sure it does not present in the TL. */
+	TEST_ASSERT_TRUE(transfer_list_rem(tl, te[0]));
 	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
-	TEST_ASSERT_NULL(transfer_list_find(tl, test_tag));
+	TEST_ASSERT_NULL(transfer_list_find(tl, tag_base));
+
+	/* Remove the TE3 and make sure it does not present in the TL. */
+	TEST_ASSERT_TRUE(transfer_list_rem(tl, te[2]));
+	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	TEST_ASSERT_NULL(transfer_list_find(tl, tag_base + 2));
+
+	/* Remove the TE2 and make sure it does not present in the TL. */
+	TEST_ASSERT_TRUE(transfer_list_rem(tl, te[1]));
+	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	TEST_ASSERT_NULL(transfer_list_find(tl, tag_base + 1));
+
+	/*
+	 * Should have only one TL_TAG_EMPTY entry.
+	 */
+	TEST_ASSERT(te[0] = transfer_list_find(tl, TL_TAG_EMPTY));
+	TEST_ASSERT(transfer_list_next(tl, te[0]) == NULL);
+}
+
+void test_set_data_size()
+{
+	struct transfer_list_header *tl = transfer_list_init(buffer, TL_SIZE);
+	struct transfer_list_entry *te[3];
+	unsigned int tag_base = test_tag;
+	unsigned int tl_size;
+
+	TEST_ASSERT_EQUAL(tl->size, tl->hdr_size);
+
+	setup_test_entries(tl, tag_base, 3, te);
+
+	/* Remove the TE2 and make sure it does not present in the TL. */
+	TEST_ASSERT_TRUE(transfer_list_rem(tl, te[1]));
+	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	TEST_ASSERT_NULL(transfer_list_find(tl, tag_base + 1));
+
+	/*
+	 * Increase te size to tl->max_size / 4, this shouldn't increase the
+	 * current transfer list's size since it will be increased with
+	 * adjacent TL_TAG_EMPTY entry.
+	 */
+	tl_size = tl->size;
+	TEST_ASSERT(transfer_list_set_data_size(tl, te[0], tl->max_size / 4));
+	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	TEST_ASSERT(te[0]->data_size == tl->max_size / 4);
+	TEST_ASSERT(tl_size == tl->size);
+
+	/*
+	 * Increase te size to tl->max_size / 2, this increases
+	 * the transfer list size.
+	 */
+	tl_size = tl->size;
+	TEST_ASSERT(transfer_list_set_data_size(tl, te[0], tl->max_size / 2));
+	TEST_ASSERT(byte_sum((void *)tl, tl->size) == 0);
+	TEST_ASSERT(te[0]->data_size == tl->max_size / 2);
+	TEST_ASSERT(tl_size < tl->size);
 }
 
 void setUp(void)
 {
 	buffer = malloc(TL_MAX_SIZE);
+	test_page_data = malloc(TL_SIZE);
+	memset(test_page_data, 0xff, TL_SIZE);
 }
 
 void tearDown(void)
 {
+	free(test_page_data);
 	free(buffer);
 	buffer = NULL;
 }
@@ -125,5 +200,7 @@ int main(void)
 	UNITY_BEGIN();
 	RUN_TEST(test_add);
 	RUN_TEST(test_add_with_align);
+	RUN_TEST(test_rem);
+	RUN_TEST(test_set_data_size);
 	return UNITY_END();
 }
