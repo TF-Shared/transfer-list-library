@@ -151,7 +151,7 @@ transfer_list_check_header(const struct transfer_list_header *tl)
 		return TL_OPS_NON;
 	}
 
-	if (tl->version == 0) {
+	if (tl->version == 0U) {
 		warn("Transfer list version is invalid\n");
 		return TL_OPS_NON;
 	} else if (tl->version == TRANSFER_LIST_VERSION) {

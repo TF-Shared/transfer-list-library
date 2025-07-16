@@ -12,8 +12,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define TRANSFER_LIST_SIGNATURE 0x4a0fb10b
-#define TRANSFER_LIST_VERSION 0x0001
+#define TRANSFER_LIST_SIGNATURE 0x4a0fb10bU
+#define TRANSFER_LIST_VERSION 0x0001U
 
 /*
  * Init value of maximum alignment required by any TE data in the TL
