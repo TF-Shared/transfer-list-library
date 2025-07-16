@@ -16,7 +16,7 @@
 void transfer_list_dump(struct transfer_list_header *tl)
 {
 	struct transfer_list_entry *te = NULL;
-	int i = 0;
+	uint32_t i = 0U;
 
 	if (!tl) {
 		return;
