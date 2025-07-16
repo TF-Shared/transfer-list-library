@@ -198,9 +198,9 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 
 	te = (struct transfer_list_entry *)va;
 
-	if (va + sizeof(*te) > tl_ev || te->hdr_size < sizeof(*te) ||
+	if (((va + sizeof(*te)) > tl_ev) || ((te->hdr_size) < (sizeof(*te))) ||
 	    libtl_add_overflow(te->hdr_size, te->data_size, &sz) ||
-	    libtl_add_overflow(va, sz, &ev) || ev > tl_ev) {
+	    libtl_add_overflow(va, sz, &ev) || (ev > tl_ev)) {
 		return NULL;
 	}
 
