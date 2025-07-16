@@ -15,16 +15,16 @@ struct logger_interface {
 
 extern struct logger_interface *logger;
 
-#define info(...)                                  \
-	do {                                       \
-		if (logger && logger->info)        \
-			logger->info(__VA_ARGS__); \
+#define info(...)                                               \
+	do {                                                    \
+		if ((logger != NULL) && (logger->info != NULL)) \
+			logger->info(__VA_ARGS__);              \
 	} while (0)
 
-#define warn(...)                                  \
-	do {                                       \
-		if (logger && logger->warn)        \
-			logger->warn(__VA_ARGS__); \
+#define warn(...)                                               \
+	do {                                                    \
+		if ((logger != NULL) && (logger->warn != NULL)) \
+			logger->warn(__VA_ARGS__);              \
 	} while (0)
 
 #define error(...)                                  \

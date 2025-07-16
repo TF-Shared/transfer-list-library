@@ -18,7 +18,7 @@ void transfer_list_dump(struct transfer_list_header *tl)
 	struct transfer_list_entry *te = NULL;
 	uint32_t i = 0U;
 
-	if (!tl) {
+	if (tl == NULL) {
 		return;
 	}
 	info("Dump transfer list:\n");
@@ -32,7 +32,7 @@ void transfer_list_dump(struct transfer_list_header *tl)
 	info("flags      0x%x\n", tl->flags);
 	while (true) {
 		te = transfer_list_next(tl, te);
-		if (!te) {
+		if (te == NULL) {
 			break;
 		}
 
@@ -120,7 +120,7 @@ transfer_list_relocate(struct transfer_list_header *tl, void *addr,
 enum transfer_list_ops
 transfer_list_check_header(const struct transfer_list_header *tl)
 {
-	if (!tl) {
+	if (tl == NULL) {
 		return TL_OPS_NON;
 	}
 
@@ -130,7 +130,7 @@ transfer_list_check_header(const struct transfer_list_header *tl)
 		return TL_OPS_NON;
 	}
 
-	if (!tl->max_size) {
+	if (tl->max_size == 0U) {
 		warn("Bad transfer list max size %#" PRIx32 "\n", tl->max_size);
 		return TL_OPS_NON;
 	}
@@ -175,7 +175,7 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 	uintptr_t ev = 0;
 	size_t sz = 0;
 
-	if (!tl) {
+	if (tl == NULL) {
 		return NULL;
 	}
 
@@ -263,15 +263,15 @@ void transfer_list_update_checksum(struct transfer_list_header *tl)
 
 bool transfer_list_verify_checksum(const struct transfer_list_header *tl)
 {
-	if (!tl) {
+	if (tl == NULL) {
 		return false;
 	}
 
-	if (!(tl->flags & TL_FLAGS_HAS_CHECKSUM)) {
+	if ((tl->flags & TL_FLAGS_HAS_CHECKSUM) == 0U) {
 		return true;
 	}
 
-	return !calc_byte_sum(tl);
+	return (calc_byte_sum(tl) == 0U);
 }
 
 bool transfer_list_set_data_size(struct transfer_list_header *tl,
@@ -488,14 +488,14 @@ struct transfer_list_entry *transfer_list_find(struct transfer_list_header *tl,
 
 	do {
 		te = transfer_list_next(tl, te);
-	} while (te && (te->tag_id != tag_id));
+	} while ((te != NULL) && (te->tag_id != tag_id));
 
 	return te;
 }
 
 void *transfer_list_entry_data(struct transfer_list_entry *entry)
 {
-	if (!entry) {
+	if (entry == NULL) {
 		return NULL;
 	}
 	return (uint8_t *)entry + entry->hdr_size;
