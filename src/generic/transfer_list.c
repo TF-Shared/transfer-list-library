@@ -43,7 +43,7 @@ void transfer_list_dump(struct transfer_list_header *tl)
 
 void transfer_entry_dump(struct transfer_list_entry *te)
 {
-	if (te) {
+	if (te != NULL) {
 		info("tag_id     0x%x\n", te->tag_id);
 		info("hdr_size   0x%x\n", te->hdr_size);
 		info("data_size  0x%x\n", te->data_size);
@@ -181,7 +181,7 @@ struct transfer_list_entry *transfer_list_next(struct transfer_list_header *tl,
 
 	tl_ev = (uintptr_t)tl + tl->size;
 
-	if (last) {
+	if (last != NULL) {
 		va = (uintptr_t)last;
 		/* check if the total size overflow */
 		if (libtl_add_overflow(last->hdr_size, last->data_size, &sz)) {
