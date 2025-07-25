@@ -413,9 +413,7 @@ struct transfer_list_entry *transfer_list_add(struct transfer_list_header *tl,
 	te = (struct transfer_list_entry *)libtl_align_up(
 		tl_ev, TRANSFER_LIST_GRANULE);
 
-	te_end = libtl_align_up((uintptr_t)te + sizeof(*te) + data_size,
-				TRANSFER_LIST_GRANULE);
-
+	te_end = (uintptr_t)te + sizeof(*te) + data_size;
 	if (te_end > (uintptr_t)tl + tl->max_size) {
 		return NULL;
 	}
@@ -452,7 +450,7 @@ transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 		return NULL;
 	}
 
-	tl_ev = (uintptr_t)tl + tl->size;
+	tl_ev = libtl_align_up((uintptr_t)tl + tl->size, TRANSFER_LIST_GRANULE);
 	ev = tl_ev + sizeof(struct transfer_list_entry);
 
 	if (!libtl_is_aligned(ev, 1 << alignment)) {
