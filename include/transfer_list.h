@@ -64,6 +64,7 @@ enum transfer_list_tag_id {
 	TL_TAG_DT_FFA_MANIFEST = 0x106,
 	TL_TAG_SRAM_LAYOUT32 = 0x107,
 	TL_TAG_EXEC_EP_INFO32 = 0x108,
+	TL_TAG_GPT_ERROR_INFO = 0x109,
 };
 
 enum transfer_list_ops {
