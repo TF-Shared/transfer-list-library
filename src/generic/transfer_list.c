@@ -230,17 +230,17 @@ struct transfer_list_entry *transfer_list_prev(struct transfer_list_header *tl,
 }
 
 /*******************************************************************************
- * Calculate the byte sum of a transfer list
- * Return byte sum of the transfer list
+ * Compute the byte-wise XOR of the transfer list
+ * Return byte-wise XOR
  ******************************************************************************/
-static uint8_t calc_byte_sum(const struct transfer_list_header *tl)
+static uint8_t calc_byte_xor(const struct transfer_list_header *tl)
 {
 	uint8_t *b = (uint8_t *)tl;
 	uint8_t cs = 0;
 	size_t n = 0;
 
 	for (n = 0; n < tl->size; n++) {
-		cs += b[n];
+		cs ^= b[n];
 	}
 
 	return cs;
@@ -248,16 +248,17 @@ static uint8_t calc_byte_sum(const struct transfer_list_header *tl)
 
 void transfer_list_update_checksum(struct transfer_list_header *tl)
 {
-	uint8_t cs;
-
 	if (!tl || !(tl->flags & TL_FLAGS_HAS_CHECKSUM)) {
 		return;
 	}
 
-	cs = calc_byte_sum(tl);
-	cs -= tl->checksum;
-	cs = 256 - cs;
-	tl->checksum = cs;
+	/*
+	 * Zeroing the checksum is necessary because  `calc_byte_xor` works on the
+	 * entire TL (including the checksum field).
+	 */
+	tl->checksum = 0;
+	tl->checksum = calc_byte_xor(tl);
+
 	assert(transfer_list_verify_checksum(tl));
 }
 
@@ -271,7 +272,7 @@ bool transfer_list_verify_checksum(const struct transfer_list_header *tl)
 		return true;
 	}
 
-	return (calc_byte_sum(tl) == 0U);
+	return (calc_byte_xor(tl) == 0U);
 }
 
 bool transfer_list_set_data_size(struct transfer_list_header *tl,
@@ -470,6 +471,9 @@ transfer_list_add_with_align(struct transfer_list_header *tl, uint32_t tag_id,
 	}
 
 	te = transfer_list_add(tl, tag_id, data_size, data);
+	if (te == NULL) {
+		return NULL;
+	}
 
 	if (alignment > tl->alignment) {
 		tl->alignment = alignment;
