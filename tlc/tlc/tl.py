@@ -11,8 +11,8 @@
 from typing import Any, Dict, List, Optional
 
 import math
+import operator
 import struct
-from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
 
@@ -98,6 +98,8 @@ class TransferList:
         self.total_size = max_size
         self.flags = flags
         self.entries: List[TransferEntry] = []
+        self.checksum = 0
+
         self.update_checksum()
 
     def __str__(self) -> str:
@@ -196,15 +198,19 @@ class TransferList:
 
     def update_checksum(self) -> None:
         """Calculates the checksum based on the sum of bytes."""
-        self.checksum = (256 - (self.sum_of_bytes() - self.checksum)) % 256
+        if not self.flags and TRANSFER_LIST_ENABLE_CHECKSUM:
+            return
+
+        self.checksum = 0
+        self.checksum = self.sum_of_bytes()
         assert self.checksum <= 0xFF
 
     def to_bytes(self) -> bytes:
         return self.header_to_bytes() + b"".join([te.to_bytes() for te in self.entries])
 
     def sum_of_bytes(self) -> int:
-        """Sum of all bytes between the base address and the end of that last TE (modulo 0xff)."""
-        return (sum(self.to_bytes())) % 256
+        """XOR sum of all bytes between the base address and the end of that last TE."""
+        return reduce(operator.xor, map(int, self.to_bytes()), 0)
 
     def get_entry(self, tag_id: int) -> Optional[TransferEntry]:
         for te in self.entries:

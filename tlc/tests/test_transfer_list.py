@@ -9,12 +9,14 @@
 """Contains unit tests for the types TransferEntry and TransferList."""
 
 import math
-from random import randint
+import operator
+from functools import reduce
 
 import pytest
+from utils import random_bytes
 
 from tlc.te import TransferEntry
-from tlc.tl import TransferList
+from tlc.tl import TRANSFER_LIST_ENABLE_CHECKSUM, TransferList
 
 large_data = 0xDEADBEEF.to_bytes(4, "big")
 small_data = 0x1234.to_bytes(3, "big")
@@ -27,17 +29,8 @@ test_entries = [
 ]
 
 
-@pytest.mark.parametrize(
-    "size,csum",
-    [
-        (-1, None),
-        (0x18, 0x9E),
-        (0x1000, 0xA6),
-        (0x2000, 0x96),
-        (0x4000, 0x76),
-    ],
-)
-def test_make_transfer_list(size, csum):
+@pytest.mark.parametrize("size", [-1, 0x18, 0x1000, 0x2000, 0x4000])
+def test_make_transfer_list(size):
     if size < 8:
         with pytest.raises(AssertionError):
             tl = TransferList(size)
@@ -47,7 +40,6 @@ def test_make_transfer_list(size, csum):
         assert tl.signature == 0x4A0FB10B
         assert not tl.entries
         assert tl.sum_of_bytes() == 0
-        assert tl.checksum == csum
 
 
 def test_add_transfer_entry(random_entries):
@@ -101,6 +93,18 @@ def test_add_out_of_range_transfer_entry(tag_id, data):
         tl.add_transfer_entry(tag_id, data)
 
 
+def test_create_tl_w_no_checksum():
+    tl = TransferList(100, not TRANSFER_LIST_ENABLE_CHECKSUM)
+    assert tl.checksum == 0
+
+    tl.add_transfer_entry(10, random_bytes(10))
+    assert tl.checksum == 0
+
+    tl.remove_tag(10)
+    assert not tl.get_entry(10)
+    assert tl.checksum == 0
+
+
 @pytest.mark.parametrize(("tag_id", "data"), test_entries)
 def test_calculate_te_sum_of_bytes(tag_id, data):
     te = TransferEntry(tag_id, len(data), data)
@@ -121,11 +125,11 @@ def test_calc_tl_checksum(tmpdir, random_entries):
     for id, data in random_entries(10):
         tl.add_transfer_entry(id, data)
 
-    assert sum(tl.to_bytes()) % 256 == 0
+    assert tl.sum_of_bytes() == 0
 
     # Write the transfer list to a file and check that the sum of bytes is 0
     tl.write_to_file(tl_file)
-    assert sum(tl_file.read_binary()) % 256 == 0
+    assert reduce(operator.xor, map(int, tl_file.read_binary()), 0) == 0
 
 
 def test_empty_transfer_list_blob(tmpdir):
