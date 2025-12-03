@@ -11,8 +11,8 @@
 from typing import Any, Dict, List, Optional
 
 import math
-import operator
 import struct
+from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
 
@@ -76,13 +76,13 @@ tag_name_to_tag_id = {
 
 
 class TransferList:
-    """Class representing a Transfer List based on version 1.0 of the Firmware Handoff specification."""
+    """Class representing a Transfer List based on version 2.0 of the Firmware Handoff specification."""
 
     # Header encoding, with little-endian byte order.
     encoding = "<I4B4I"
     hdr_size = 0x18
     signature = 0x4A0FB10B
-    version = 1
+    version = 2
     granule = 8
 
     def __init__(
@@ -98,8 +98,6 @@ class TransferList:
         self.total_size = max_size
         self.flags = flags
         self.entries: List[TransferEntry] = []
-        self.checksum = 0
-
         self.update_checksum()
 
     def __str__(self) -> str:
@@ -198,19 +196,17 @@ class TransferList:
 
     def update_checksum(self) -> None:
         """Calculates the checksum based on the sum of bytes."""
-        if not self.flags and TRANSFER_LIST_ENABLE_CHECKSUM:
-            return
-
-        self.checksum = 0
-        self.checksum = self.sum_of_bytes()
-        assert self.checksum <= 0xFF
+        if self.flags & TRANSFER_LIST_ENABLE_CHECKSUM:
+            self.checksum = (256 - (self.sum_of_bytes() - self.checksum)) % 256
+        else:
+            self.checksum = 0
 
     def to_bytes(self) -> bytes:
         return self.header_to_bytes() + b"".join([te.to_bytes() for te in self.entries])
 
     def sum_of_bytes(self) -> int:
-        """XOR sum of all bytes between the base address and the end of that last TE."""
-        return reduce(operator.xor, map(int, self.to_bytes()), 0)
+        """Sum of all bytes between the base address and the end of that last TE (modulo 0xff)."""
+        return (sum(self.to_bytes())) % 256
 
     def get_entry(self, tag_id: int) -> Optional[TransferEntry]:
         for te in self.entries:
