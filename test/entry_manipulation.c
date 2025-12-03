@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: MIT OR GPL-2.0-or-later
  */
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +20,7 @@ uint8_t byte_sum(const char *ptr, size_t len)
 	uint8_t sum = 0;
 
 	for (size_t i = 0; i < len; i++) {
-		sum ^= ptr[i];
+		sum += ptr[i];
 	}
 
 	return sum;
@@ -91,14 +90,16 @@ void test_add_with_align()
 	struct transfer_list_entry *te;
 
 	unsigned int test_id = 1;
-	const size_t entry_size = 0x10;
-	uint8_t *data;
+	const unsigned int entry_size = 0xff;
+	int *data;
+
+	TEST_ASSERT(tl->size == tl->hdr_size);
 
 	/*
 	 * When a new TE with a larger alignment requirement than already exists
 	 * appears, the TE should be added and TL alignement updated.
 	 */
-	for (uint8_t align = 0; align < 0x10; align++, test_id++) {
+	for (char align = 0; align < (1 << 4); align++, test_id++) {
 		TEST_ASSERT(
 			te = transfer_list_add_with_align(
 				tl, test_id, entry_size, &test_data, align));
