@@ -98,7 +98,7 @@ struct transfer_list_header {
 
 struct __attribute__((packed)) transfer_list_entry {
 	uint32_t tag_id : 24;
-	uint8_t hdr_size;
+	uint32_t hdr_size : 8;
 	uint32_t data_size;
 	/*
 	 * Commented out element used to visualize dynamic part of the
